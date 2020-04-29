@@ -1,0 +1,27 @@
+
+# set PATH settings for all software
+source .bashrc
+
+# step 0: prepare reference genome
+rsem-prepare-reference --gtf *.gtf *.fa ${REF_NAME}
+
+
+# step 1: run bcl2fastq for converting .bcl to .fastq
+bcl2fastq -p 5 --runfolder-dir=${RunFolder} --output-dir=${OUTPUT_DIR}
+gunzip *.fastq.gz
+
+
+# step 2: run FastQC for quality control
+fastqc *.fastq --outdir=${OUT_DIR}
+unzip *.zip
+
+# step 2 (optional) run Trimmomatic for adapter trimming
+java -jar trimmomatic-0.39.jar SE -threads 5 -phred33 *.fastq *.out.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+
+
+# step 3: run RSEM with Bowtie alignment (single-end data)
+rsem-calculate-expression -p 5 *.fastq ${REF_NAME} ${OUT_NAME} --no-bam-output
+
+
+# step 4: generating count matrix
+rsem-generate-data-matrix *.genes.results > expression.matrix
